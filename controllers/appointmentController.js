@@ -1,14 +1,16 @@
 import Appointment from "../models/appointmentModel.js";
+import { sendAppointmentConfirmationEmail } from "../utils/emailService.js";
 
 export const createAppointment = async (req, res) => {
   try {
     const { doctorName, specialty, date, time, status, reason } = req.body;
 
-    if (!doctorName || !specialty || !date || !time || !reason) {
+    const email = req.user.email; 
+
+    if (!doctorName || !specialty || !date || !time || !reason || !email) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
-   
     const newAppointment = new Appointment({
       doctorName,
       specialty,
@@ -16,16 +18,18 @@ export const createAppointment = async (req, res) => {
       time,
       status,
       reason,
+      email, 
     });
-    
-    if ("email" in req.body) {
-      delete req.body.email;
-    }
 
     await newAppointment.save();
 
+    console.log("Sending email to:", email);
+await sendAppointmentConfirmationEmail(email, { doctorName, date, time });
+console.log("Email function executed");
+
+
     res.status(201).json({
-      message: "Appointment created successfully",
+      message: "Appointment created successfully, confirmation email sent",
       newAppointment,
     });
   } catch (error) {
@@ -33,6 +37,7 @@ export const createAppointment = async (req, res) => {
     res.status(500).json({ message: "Server Error", error });
   }
 };
+
 
 export const getAppointments = async (req, res) => {
   try {
